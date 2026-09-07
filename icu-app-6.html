@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>سجل العناية المركزة</title>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0e5c56">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ICU Tracker">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root{
+    --ink:#16262b;
+    --bg:#f4faf9;
+    --panel:#ffffff;
+    --teal:#0e5c56;
+    --teal-deep:#0a413d;
+    --mint:#e2f1ee;
+    --line:#d7e6e2;
+    --muted:#5f7570;
+    --critical:#b3402f;
+    --critical-bg:#fbe9e5;
+    --stable:#2d7a6b;
+    --stable-bg:#e6f4f1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'IBM Plex Sans Arabic', system-ui, sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+  .app{max-width:720px;margin:0 auto;padding:20px 16px 60px;}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;padding:6px 2px 18px;border-bottom:2px solid var(--teal);margin-bottom:16px;}
+  header.top h1{font-size:1.3rem;margin:0;font-weight:700;color:var(--teal-deep);}
+  header.top .tag{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--muted);}
+  header.top button.logout{background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;font-family:inherit;text-decoration:underline;}
+
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;font-size:.82rem;color:var(--muted);}
+  .breadcrumb .crumb{cursor:pointer;padding:4px 10px;background:#fff;border:1px solid var(--line);border-radius:20px;transition:.15s;}
+  .breadcrumb .crumb:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .breadcrumb .crumb.current{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .breadcrumb .sep{color:var(--line);}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .panel h2{margin:0 0 14px;font-size:1.02rem;color:var(--teal-deep);font-weight:600;}
+  .panel .sub{font-size:.8rem;color:var(--muted);margin:-10px 0 14px;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:5px;}
+  .field input, .field select, .field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:.92rem;background:#fbfdfc;color:var(--ink);}
+  .field textarea{resize:vertical;min-height:64px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .btn{background:var(--teal);color:#fff;border:none;padding:11px 20px;border-radius:8px;font-family:inherit;font-size:.92rem;font-weight:600;cursor:pointer;transition:.15s;}
+  .btn:hover{background:var(--teal-deep);}
+  .btn.wide{width:100%;}
+  .btn.ghost{background:transparent;color:var(--teal);border:1px solid var(--teal);}
+  .btn.ghost:hover{background:var(--mint);}
+  .btn.small{padding:6px 12px;font-size:.8rem;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.danger{background:var(--critical);}
+  .btn.danger:hover{background:#8a3023;}
+
+  .card{border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:10px;background:#fdfffe;cursor:pointer;transition:.15s;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .card:hover{border-color:var(--teal);box-shadow:0 1px 6px rgba(14,92,86,.08);}
+  .card-main strong{font-size:.98rem;display:block;}
+  .card-main .meta{font-size:.78rem;color:var(--muted);margin-top:3px;}
+  .card-arrow{color:var(--teal);font-size:1.1rem;}
+  .badge{font-size:.7rem;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .badge.active{background:var(--mint);color:var(--teal-deep);}
+  .badge.discharged{background:var(--stable-bg);color:var(--stable);}
+  .badge.deceased{background:var(--critical-bg);color:var(--critical);}
+
+  .note{border-right:3px solid var(--teal);padding:10px 12px;margin-bottom:9px;background:#fbfdfc;border-radius:0 8px 8px 0;}
+  .note.critical{border-right-color:var(--critical);background:var(--critical-bg);}
+  .note-head{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:5px;font-family:'IBM Plex Mono',monospace;}
+  .note p{margin:4px 0;font-size:.88rem;line-height:1.5;}
+  .note .label{color:var(--muted);font-size:.74rem;}
+  .critical-flag{background:var(--critical-bg);color:var(--critical);font-size:.72rem;padding:3px 9px;border-radius:20px;font-weight:600;display:inline-block;margin-bottom:6px;}
+
+  .empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:.88rem;}
+  .empty span{display:block;font-size:1.7rem;margin-bottom:8px;}
+
+  .tabs2{display:flex;gap:6px;margin-bottom:16px;}
+  .tabs2 button{flex:1;background:#fff;border:1px solid var(--line);color:var(--muted);padding:9px;border-radius:8px;font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:500;}
+  .tabs2 button.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--teal-deep);color:#fff;padding:10px 20px;border-radius:8px;font-size:.85rem;opacity:0;pointer-events:none;transition:.25s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .doctor-chip{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;background:#fff;}
+  .doctor-chip:hover{border-color:var(--teal);}
+  .doctor-chip .id{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:.78rem;}
+
+  .admin-badge{background:var(--teal-deep);color:#fff;font-size:.65rem;padding:2px 8px;border-radius:10px;margin-right:6px;vertical-align:middle;}
+
+  .fab{position:fixed;bottom:24px;left:24px;width:56px;height:56px;border-radius:50%;background:var(--teal);color:#fff;border:none;font-size:1.8rem;cursor:pointer;box-shadow:0 4px 14px rgba(14,92,86,.35);display:flex;align-items:center;justify-content:center;transition:.2s;z-index:40;}
+  .fab:hover{background:var(--teal-deep);transform:translateY(-2px);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(22,38,43,.45);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-panel{background:var(--panel);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:20px 16px 30px;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease-out;}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .modal-header h3{margin:0;font-size:1.1rem;color:var(--teal-deep);}
+  .modal-close{background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;padding:4px;line-height:1;}
+  .modal-close:hover{color:var(--critical);}
+
+  .stats-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .stat-card{flex:1;min-width:120px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+
+  .on-duty-banner{display:flex;align-items:center;gap:8px;background:var(--mint);color:var(--teal-deep);padding:10px 14px;border-radius:8px;font-size:.9rem;margin-bottom:10px;}
+  .on-duty-banner.pending{background:#fff6e3;color:#8a6416;}
+  .on-duty-icon{font-size:1rem;flex-shrink:0;}
+  .handover-confirm-panel{background:var(--mint);border:1px solid var(--teal);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .handover-confirm-panel h2{color:var(--teal-deep);}
+  .stat-value{font-size:1.3rem;font-weight:700;color:var(--teal-deep);}
+  .stat-label{font-size:.75rem;color:var(--muted);margin-top:2px;}
+  .stat-card.danger{border-color:var(--critical-bg);background:var(--critical-bg);}
+  .stat-card.danger .stat-value{color:var(--critical);}
+  .stat-card.success{border-color:var(--stable-bg);background:var(--stable-bg);}
+  .stat-card.success .stat-value{color:var(--stable);}
+  .stat-card.info{border-color:var(--mint);background:var(--mint);}
+
+  .section-title{font-size:.85rem;font-weight:700;color:var(--teal-deep);margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--teal);display:flex;align-items:center;gap:6px;}
+  .section-title .count{background:var(--teal);color:#fff;font-size:.65rem;padding:2px 8px;border-radius:10px;}
+
+  .info-text{font-size:1.05rem;line-height:1.8;margin:8px 0;}
+  .info-label{color:var(--muted);font-size:.9rem;font-weight:600;}
+  .info-value{color:var(--ink);font-weight:500;}
+
+  .history-list{margin-top:16px;}
+  .history-item{padding:14px 16px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:10px;}
+  .history-item .h-date{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--muted);margin-bottom:6px;}
+  .history-item .h-body{font-size:1rem;line-height:1.7;}
+  .history-item .h-body p{margin:4px 0;}
+
+  .ab-item{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff;cursor:pointer;transition:.15s;}
+  .ab-item:hover{border-color:var(--teal);box-shadow:0 1px 6px rgba(14,92,86,.08);}
+  .ab-item .ab-name{font-weight:700;font-size:1.05rem;color:var(--teal-deep);}
+  .ab-item .ab-date{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--muted);margin-top:4px;}
+  .ab-item .ab-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:1rem;line-height:1.7;}
+  .ab-item.open .ab-detail{display:block;}
+
+  .auto-date{font-family:'IBM Plex Mono',monospace;font-size:.9rem;color:var(--teal-deep);background:var(--mint);padding:10px 14px;border-radius:8px;text-align:center;margin-bottom:12px;}
+
+  .ho-box{padding:16px 18px;background:#fff;border:1px solid var(--line);border-radius:10px;margin-top:14px;}
+  .ho-box .ho-label{color:var(--muted);font-size:.9rem;font-weight:600;margin-bottom:6px;}
+  .ho-box .ho-text{font-size:1.1rem;line-height:1.8;color:var(--ink);}
+
+  .culture-item{padding:12px 14px;margin-bottom:8px;background:#fff;border:1px solid var(--line);border-radius:10px;}
+  .culture-item .c-date{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);margin-bottom:4px;}
+  .culture-item .c-body{font-size:1rem;line-height:1.7;}
+
+  .ext-lab-item{padding:12px 14px;margin-bottom:8px;background:#fff;border:1px solid var(--line);border-radius:10px;}
+  .ext-lab-item .el-date{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);margin-bottom:4px;}
+  .ext-lab-item .el-body{font-size:1rem;line-height:1.7;}
+
+  .img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+  .img-thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:pointer;background:#fbfdfc;position:relative;}
+  .img-thumb img, .img-thumb video{width:100%;height:100%;object-fit:cover;}
+  .img-thumb .img-date{position:absolute;bottom:0;left:0;right:0;background:rgba(22,38,43,.7);color:#fff;font-size:.65rem;padding:2px 6px;font-family:'IBM Plex Mono',monospace;}
+  .img-thumb .img-type{position:absolute;top:4px;right:4px;background:var(--teal);color:#fff;font-size:.6rem;padding:2px 6px;border-radius:4px;}
+
+  .img-preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .img-preview{position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+  .img-preview img, .img-preview video{width:100%;height:100%;object-fit:cover;}
+  .img-preview .img-remove{position:absolute;top:2px;left:2px;background:var(--critical);color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:70;display:none;align-items:center;justify-content:center;padding:20px;}
+  .lightbox.open{display:flex;}
+  .lightbox img, .lightbox video{max-width:100%;max-height:90vh;border-radius:8px;}
+  .lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);color:#fff;border:none;width:40px;height:40px;border-radius:50%;font-size:1.4rem;cursor:pointer;}
+  .lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer;}
+  .lightbox-prev{left:12px;}
+  .lightbox-next{right:12px;}
+  .lightbox-caption{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:6px 16px;border-radius:20px;font-size:.8rem;font-family:'IBM Plex Mono',monospace;}
+
+  .field-label-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;}
+  .field-label-row label{margin:0;}
+  .mic-btn{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--teal);background:var(--mint);color:var(--teal-deep);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:.15s;}
+  .mic-btn:hover{background:var(--teal);color:#fff;}
+  .mic-btn.listening{background:var(--critical);border-color:var(--critical);color:#fff;animation:micPulse 1.1s infinite;}
+  @keyframes micPulse{0%{box-shadow:0 0 0 0 rgba(179,64,47,.5);}70%{box-shadow:0 0 0 10px rgba(179,64,47,0);}100%{box-shadow:0 0 0 0 rgba(179,64,47,0);}}
+
+  .splash{position:fixed;inset:0;background:linear-gradient(160deg, #16233f 0%, #0a1128 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:100;}
+  .splash svg{width:118px;height:118px;overflow:visible;}
+  .splash .bed-part{stroke:#e9edf5;stroke-width:6;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;animation:bedIn .5s ease-out .55s forwards;}
+  .splash .mattress{fill:#e9edf5;opacity:0;animation:bedIn .5s ease-out .55s forwards;}
+  .splash .pillow{fill:#7fd9c8;opacity:0;animation:bedIn .5s ease-out .7s forwards;}
+  .splash .monitor-frame{stroke:#e9edf5;stroke-width:5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:180;stroke-dashoffset:180;animation:drawMonitor .5s ease-out forwards;}
+  .splash .monitor-stand{stroke:#e9edf5;stroke-width:5;fill:none;stroke-linecap:round;opacity:0;animation:bedIn .3s ease-out .45s forwards;}
+  .splash .ekg-path{fill:none;stroke:#7fd9c8;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:140;stroke-dashoffset:140;animation:drawEkg .7s ease-out .55s forwards, pulseGlow 1.5s ease-in-out 1.25s infinite;}
+  @keyframes drawMonitor{to{stroke-dashoffset:0;}}
+  @keyframes bedIn{to{opacity:1;}}
+  @keyframes drawEkg{to{stroke-dashoffset:0;}}
+  @keyframes pulseGlow{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .splash h1{color:#fff;font-size:1.15rem;font-weight:700;margin:0;opacity:0;animation:fadeUp .5s ease-out 1.05s forwards;letter-spacing:.2px;}
+  .splash .sub{color:rgba(255,255,255,.65);font-size:.78rem;margin:0;opacity:0;animation:fadeUp .5s ease-out 1.2s forwards;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>سجل العناية المركزة</h1>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="tag" id="doctor-tag"></span>
+    </div>
+  </header>
+  <div id="breadcrumb" class="breadcrumb"></div>
+  <div id="content"></div>
+</div>
+
+<button class="fab" id="fab-btn" onclick="openPatientModal()" title="إضافة عيان جديد" style="display:none;">+</button>
+
+<div class="modal-overlay" id="patient-modal" onclick="if(event.target===this)closePatientModal()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>إضافة عيان جديد</h3>
+      <button class="modal-close" onclick="closePatientModal()">&times;</button>
+    </div>
+    <div class="row2">
+      <div class="field"><label>اسم المريض</label><input id="m-name" placeholder="اسم المريض"></div>
+      <div class="field"><label>السن</label><input id="m-age" type="number" placeholder="السن"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>النوع</label>
+        <select id="m-gender"><option value="ذكر">ذكر</option><option value="أنثى">أنثى</option></select>
+      </div>
+      <div class="field"><label>تاريخ الدخول</label><input id="m-date" type="date"></div>
+    </div>
+    <div class="field"><label>التشخيص الأساسي</label><textarea id="m-diag" placeholder="التشخيص الأولي / سبب الدخول"></textarea></div>
+    <div class="field">
+      <div class="field-label-row">
+        <label>H/O <small style="color:var(--muted)">(أمراض سابقة، عمليات، حساسية، أدوية مستمرة...)</small></label>
+        <button type="button" class="mic-btn" id="mic-m-history" title="تسجيل صوتي" onclick="toggleVoiceInput('m-history','mic-m-history')">🎤</button>
+      </div>
+      <textarea id="m-history" placeholder="مثال: سكري منذ 5 سنوات، ضغط مرتفع، عملية قلب مفتوح 2020..."></textarea>
+    </div>
+    <div class="field">
+      <label>صورة التذكرة <small style="color:var(--muted)">(اختياري)</small></label>
+      <input type="file" id="m-ticket" accept="image/*" onchange="handleTicketImageSelect(event)">
+      <div class="img-preview-grid" id="img-preview-area-ticket"></div>
+    </div>
+    <div class="row2" style="margin-top:4px;">
+      <button class="btn ghost wide" onclick="closePatientModal()">إلغاء</button>
+      <button class="btn wide" onclick="submitPatientModal()">تسجيل الحالة</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <button class="lightbox-nav lightbox-prev" onclick="lightboxPrev()">‹</button>
+  <button class="lightbox-nav lightbox-next" onclick="lightboxNext()">›</button>
+  <div id="lightbox-content"></div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://stgtqctnjvafuuqfvjfl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_flQzlWHm2Wiu-CFOykR4iQ_UZS_MvX5';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const APP_ROW_ID = 'main';
+
+const ADMIN_PASS  = '1997';
+const ADMIN_NAME  = 'محمد عبدالمقصود';
+
+let state = { doctors: [], hospitals: [], patients: [], notes: [], handovers: [] };
+let session = { doctor: null, hospitalId: null, unitId: null, patientId: null, isAdmin: false };
+let screen = 'login';
+let patientTab = 'info';
+let loaded = false;
+let saveFailed = false;
+let lightboxImages = [];
+let lightboxIndex = 0;
+let pendingImages = { imaging: [], cultures: [], extlabs: [] };
+let pendingTicketImage = null;
+let activeRecognition = null;
+let activeRecognitionField = null;
+let activeRecognitionBase = '';
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+async function loadState(){
+  const splashMinDelay = new Promise(res => setTimeout(res, 1300));
+  try{
+    const fetchPromise = supabaseClient
+      .from('app_data')
+      .select('data')
+      .eq('id', APP_ROW_ID)
+      .maybeSingle();
+    const [{ data, error }] = await Promise.all([fetchPromise, splashMinDelay]);
+    if(error) throw error;
+    if(data && data.data){
+      state = data.data;
+    } else {
+      await supabaseClient.from('app_data').insert({ id: APP_ROW_ID, data: state });
+    }
+    if(!state.handovers) state.handovers = [];
+    if(!state.doctors) state.doctors = [];
+    const adminExists = state.doctors.some(d => d.name===ADMIN_NAME);
+    if(!adminExists){
+      state.doctors.push({id:uid(), name:ADMIN_NAME, docId:'1'});
+      saveState();
+    }
+  }catch(e){
+    await splashMinDelay;
+    const msg = (e && (e.message || e.error_description || e.details)) || JSON.stringify(e);
+    console.error('load error:', msg, e);
+    toast('مشكلة في تحميل البيانات: ' + msg);
+  }
+  loaded = true;
+  render();
+}
+
+let saveTimer = null;
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try{
+      const { error } = await supabaseClient
+        .from('app_data')
+        .upsert({ id: APP_ROW_ID, data: state, updated_at: new Date().toISOString() });
+      if(error) throw error;
+      saveFailed = false;
+    }catch(e){
+      const msg = (e && (e.message || e.error_description || e.details)) || JSON.stringify(e);
+      console.error('save error:', msg, e);
+      if(!saveFailed){ toast('مشكلة في الحفظ: ' + msg); saveFailed = true; }
+    }
+  }, 250);
+}
+
+function getHospital(id){ return state.hospitals.find(h=>h.id===id); }
+function getUnit(hospitalId, unitId){ const h=getHospital(hospitalId); return h ? h.units.find(u=>u.id===unitId) : null; }
+function getPatient(id){ return state.patients.find(p=>p.id===id); }
+function statusLabel(s){ return s==='active'?'تحت المتابعة':s==='discharged'?'خرج':'متوفى'; }
+
+function getCurrentOnDuty(hospitalId, unitId){
+  const confirmed = state.handovers
+    .filter(h => h.hospitalId===hospitalId && h.unitId===unitId && h.status==='confirmed')
+    .sort((a,b) => (a.confirmedAt||'').localeCompare(b.confirmedAt||''));
+  return confirmed.length ? confirmed[confirmed.length-1] : null;
+}
+function getPendingHandoverFor(hospitalId, unitId, doctorId){
+  return state.handovers.find(h => h.hospitalId===hospitalId && h.unitId===unitId && h.toDoctorId===doctorId && h.status==='pending');
+}
+function getPendingHandoversOut(hospitalId, unitId){
+  return state.handovers.filter(h => h.hospitalId===hospitalId && h.unitId===unitId && h.status==='pending');
+}
+
+function goto(s){ screen = s; render(); }
+
+function renderHeader(){
+  const tag = document.getElementById('doctor-tag');
+  if(session.doctor){
+    tag.innerHTML = (session.isAdmin ? '<span class="admin-badge">أدمن</span>' : '') + 'د. ' + session.doctor.name;
+  } else {
+    tag.textContent = '';
+  }
+}
+
+function renderBreadcrumb(){
+  const el = document.getElementById('breadcrumb');
+  if(!session.doctor){ el.innerHTML=''; return; }
+  const crumbs = [{label:'د. '+session.doctor.name, s:'hospital', enabled:true}];
+  const h = getHospital(session.hospitalId);
+  if(h) crumbs.push({label:h.name, s:'unit', enabled:true});
+  const u = h ? getUnit(h.id, session.unitId) : null;
+  if(u) crumbs.push({label:u.name, s:'patient', enabled:true});
+  const p = getPatient(session.patientId);
+  if(p && screen==='patient-detail') crumbs.push({label:p.name, s:'patient-detail', enabled:false});
+
+  el.innerHTML = crumbs.map((c,i)=>{
+    const isCurrent = c.s===screen;
+    return (i>0?'<span class="sep">›</span>':'') +
+      `<span class="crumb ${isCurrent?'current':''}" onclick="goto('${c.s}')">${c.label}</span>`;
+  }).join('') + `<span class="sep">·</span><span class="crumb" onclick="logout()" style="color:var(--critical);border-color:var(--critical-bg);">خروج</span>`;
+}
+
+function render(){
+  renderHeader();
+  renderBreadcrumb();
+  const c = document.getElementById('content');
+  const fab = document.getElementById('fab-btn');
+
+  if(!loaded){
+    c.innerHTML = `
+      <div class="splash">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <rect class="monitor-frame" x="58" y="14" width="62" height="36" rx="6"/>
+          <path class="monitor-stand" d="M89,50 L89,70 M76,70 L102,70"/>
+          <path class="ekg-path" d="M66,32 L76,32 L82,22 L88,42 L94,24 L100,32 L112,32"/>
+          <rect class="bed-part" x="30" y="78" width="16" height="68" rx="4"/>
+          <rect class="bed-part" x="146" y="96" width="16" height="50" rx="4"/>
+          <rect class="mattress" x="38" y="104" width="120" height="22" rx="7"/>
+          <rect class="pillow" x="42" y="94" width="28" height="16" rx="5"/>
+        </svg>
+        <h1>سجل العناية المركزة</h1>
+        <p class="sub">جارِ تحميل البيانات…</p>
+      </div>`;
+    fab.style.display='none';
+    return;
+  }
+  if(screen==='login'){ fab.style.display='none'; return renderLogin(c); }
+  if(screen==='hospital'){ fab.style.display='none'; return renderHospitalScreen(c); }
+  if(screen==='unit'){ fab.style.display='none'; return renderUnitScreen(c); }
+  if(screen==='patient'){ fab.style.display='flex'; return renderPatientScreen(c); }
+  if(screen==='patient-detail'){ fab.style.display='none'; return renderPatientDetail(c); }
+  if(screen==='handover'){ fab.style.display='none'; return renderHandoverScreen(c); }
+}
+
+/* ---------- LOGIN ---------- */
+function renderLogin(c){
+  c.innerHTML = `
+    <div class="panel">
+      <h2>تسجيل الدخول</h2>
+      <div class="sub">لازم الاسم والـ ID اللي الأدمن دّاهولك</div>
+      <div class="row2">
+        <div class="field"><label>اسم الطبيب</label><input id="l-name" placeholder="اكتب اسمك"></div>
+        <div class="field"><label>رقم / ID الطبيب</label><input id="l-id" placeholder="اكتب الـ ID بتاعك"></div>
+      </div>
+      <div class="field">
+        <label>كلمة مرور الأدمن <small style="color:var(--muted)">(للأدمن فقط — من غير ID)</small></label>
+        <input id="l-admin" type="password" placeholder="اتركها فاضية لو دكتور عادي">
+      </div>
+      <button class="btn wide" onclick="doLogin()">دخول</button>
+    </div>
+    ${state.doctors.length? `
+    <div class="panel">
+      <h2>دخول سريع</h2>
+      ${state.doctors.slice().reverse().map(d=>`
+        <div class="doctor-chip" onclick="quickLogin('${d.id}')">
+          <span>${d.name}</span>
+          <span class="id">${d.docId||'—'}</span>
+        </div>`).join('')}
+    </div>` : ''}`;
+}
+function doLogin(){
+  const name = document.getElementById('l-name').value.trim();
+  const docId = document.getElementById('l-id').value.trim();
+  const adminPass = document.getElementById('l-admin').value.trim();
+
+  if(adminPass !== '' && adminPass === ADMIN_PASS){
+    const lookupName = name || ADMIN_NAME;
+    let doc = state.doctors.find(d => d.name===lookupName && (docId? d.docId===docId : true));
+    if(!doc) doc = state.doctors.find(d => d.name===lookupName);
+    if(!doc){
+      doc = {id:uid(), name:lookupName, docId: docId || '1'};
+      state.doctors.push(doc);
+      saveState();
+    }
+    session.doctor = doc;
+    session.isAdmin = true;
+    toast('أهلاً د. ' + doc.name + ' (أدمن)');
+    return goto('hospital');
+  }
+
+  if(!name) return toast('اكتب اسمك');
+  if(!docId) return toast('اكتب الـ ID الخاص بيك');
+
+  const doc = state.doctors.find(d => d.name===name && d.docId===docId);
+  if(!doc){
+    return toast('الاسم أو الـ ID مش مطابقين — كلم الأدمن عشان يضيفك');
+  }
+  session.doctor = doc;
+  session.isAdmin = false;
+  toast('أهلاً د. ' + name);
+  goto('hospital');
+}
+function quickLogin(id){
+  const doc = state.doctors.find(d=>d.id===id);
+  session.doctor = doc;
+  session.isAdmin = false;
+  toast('أهلاً د. ' + doc.name);
+  goto('hospital');
+}
+function logout(){
+  session = { doctor:null, hospitalId:null, unitId:null, patientId:null, isAdmin:false };
+  goto('login');
+}
+
+/* ---------- HOSPITAL ---------- */
+function renderHospitalScreen(c){
+  const addPanel = session.isAdmin ? `
+    <div class="panel">
+      <h2>إضافة مستشفى جديد</h2>
+      <div class="field"><input id="h-name" placeholder="اسم المستشفى"></div>
+      <button class="btn ghost" onclick="addHospital()">إضافة</button>
+    </div>` : '';
+
+  const doctorsPanel = session.isAdmin ? `
+    <div class="panel">
+      <h2>إدارة الأطباء</h2>
+      <div class="field"><label>اسم الطبيب الجديد</label><input id="ad-name" placeholder="اسم الطبيب"></div>
+      <div class="field"><label>الـ ID اللي هتدّيه له</label><input id="ad-id" placeholder="رقم / ID"></div>
+      <button class="btn ghost wide" onclick="addDoctorByAdmin()">إضافة الطبيب</button>
+      ${state.doctors.length ? `
+      <div class="history-list">
+        ${state.doctors.slice().reverse().map(d=>`
+          <div class="doctor-chip" style="cursor:default;">
+            <span>${d.name}</span>
+            <span class="id">${d.docId||'—'}</span>
+          </div>`).join('')}
+      </div>` : ''}
+    </div>` : '';
+
+  c.innerHTML = `
+    <div class="panel">
+      <h2>اختَر المستشفى</h2>
+      ${state.hospitals.length===0 ? `<div class="empty"><span>🏥</span>لسه معملتش أي مستشفى</div>` :
+        state.hospitals.slice().reverse().map(h=>`
+          <div class="card" onclick="selectHospital('${h.id}')">
+            <div class="card-main"><strong>${h.name}</strong><div class="meta">${h.units.length} وحدة عناية مركزة</div></div>
+            <span class="card-arrow">‹</span>
+          </div>`).join('')}
+    </div>
+    ${addPanel}
+    ${doctorsPanel}`;
+}
+function addDoctorByAdmin(){
+  if(!session.isAdmin) return toast('مش مسموح — الأدمن بس');
+  const name = document.getElementById('ad-name').value.trim();
+  const docId = document.getElementById('ad-id').value.trim();
+  if(!name) return toast('اكتب اسم الطبيب');
+  if(!docId) return toast('اكتب الـ ID');
+  const idTaken = state.doctors.some(d => d.docId===docId);
+  if(idTaken) return toast('الـ ID ده متسجل بالفعل لطبيب تاني');
+  state.doctors.push({id:uid(), name, docId});
+  saveState();
+  toast('اتضاف د. ' + name + ' بنجاح');
+  document.getElementById('ad-name').value = '';
+  document.getElementById('ad-id').value = '';
+  render();
+}
+function addHospital(){
+  if(!session.isAdmin) return toast('مش مسموح — الأدمن بس');
+  const name = document.getElementById('h-name').value.trim();
+  if(!name) return toast('اكتب اسم المستشفى');
+  state.hospitals.push({id:uid(), name, units:[]});
+  saveState();
+  toast('اتضافت');
+  render();
+}
+function selectHospital(id){
+  session.hospitalId = id; session.unitId=null; session.patientId=null;
+  goto('unit');
+}
+
+/* ---------- UNIT ---------- */
+function renderUnitScreen(c){
+  const h = getHospital(session.hospitalId);
+  if(!h) return goto('hospital');
+
+  const addPanel = session.isAdmin ? `
+    <div class="panel">
+      <h2>إضافة وحدة جديدة</h2>
+      <div class="field"><input id="u-name" placeholder="مثال: عناية مركزة ٢ / قلب / جراحة"></div>
+      <button class="btn ghost" onclick="addUnit()">إضافة</button>
+    </div>` : '';
+
+  c.innerHTML = `
+    <div class="panel">
+      <h2>اختَر وحدة العناية</h2>
+      <div class="sub">${h.name}</div>
+      ${h.units.length===0 ? `<div class="empty"><span>🛏️</span>لسه معملتش وحدات في المستشفى ده</div>` :
+        h.units.slice().reverse().map(u=>{
+          const count = state.patients.filter(p=>p.hospitalId===h.id && p.unitId===u.id && p.status==='active').length;
+          return `<div class="card" onclick="selectUnit('${u.id}')">
+            <div class="card-main"><strong>${u.name}</strong><div class="meta">${count} حالة نشطة</div></div>
+            <span class="card-arrow">‹</span>
+          </div>`;
+        }).join('')}
+    </div>
+    ${addPanel}`;
+}
+function addUnit(){
+  if(!session.isAdmin) return toast('مش مسموح — الأدمن بس');
+  const name = document.getElementById('u-name').value.trim();
+  if(!name) return toast('اكتب اسم الوحدة');
+  const h = getHospital(session.hospitalId);
+  h.units.push({id:uid(), name});
+  saveState();
+  toast('اتضافت');
+  render();
+}
+function selectUnit(id){
+  session.unitId = id; session.patientId = null;
+  goto('patient');
+}
+
+/* ---------- PATIENT SELECT ---------- */
+function renderPatientScreen(c){
+  const h = getHospital(session.hospitalId);
+  const u = h ? getUnit(h.id, session.unitId) : null;
+  if(!h || !u) return goto('unit');
+
+  const allPatients = state.patients.filter(p=>p.hospitalId===h.id && p.unitId===u.id);
+  const active = allPatients.filter(p=>p.status==='active').slice().reverse();
+  const closed = allPatients.filter(p=>p.status!=='active').slice().reverse();
+
+  const total = allPatients.length;
+  const activeCount = active.length;
+  const dischargedCount = allPatients.filter(p=>p.status==='discharged').length;
+  const deceasedCount = allPatients.filter(p=>p.status==='deceased').length;
+  const closedTotal = dischargedCount + deceasedCount;
+
+  const dischargeRate = closedTotal > 0 ? Math.round((dischargedCount / closedTotal) * 100) : 0;
+  const mortalityRate = closedTotal > 0 ? Math.round((deceasedCount / closedTotal) * 100) : 0;
+
+  const activeCards = active.length === 0
+    ? `<div class="empty"><span>🧑‍⚕️</span>مفيش حالات نشطة دلوقتي</div>`
+    : active.map(p=>`
+        <div class="card" onclick="selectPatient('${p.id}')">
+          <div class="card-main">
+            <strong>${p.name}</strong>
+            <div class="meta">${p.age?p.age+' سنة · ':''}${p.gender||''} · دخل ${p.admissionDate||'—'}</div>
+          </div>
+          <span class="badge active">تحت المتابعة</span>
+        </div>`).join('');
+
+  const closedCards = closed.length === 0
+    ? `<div class="empty"><span>📋</span>مفيش حالات منتهية لسه</div>`
+    : closed.map(p=>`
+        <div class="card" onclick="selectPatient('${p.id}')">
+          <div class="card-main">
+            <strong>${p.name}</strong>
+            <div class="meta">${p.age?p.age+' سنة · ':''}${p.gender||''} · ${p.dischargeDate?'تاريخ: '+p.dischargeDate:''}</div>
+          </div>
+          <span class="badge ${p.status}">${statusLabel(p.status)}</span>
+        </div>`).join('');
+
+  const onDuty = getCurrentOnDuty(h.id, u.id);
+  const pendingOut = getPendingHandoversOut(h.id, u.id);
+
+  c.innerHTML = `
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;">حالات ${u.name}</h2>
+        <button class="btn small ghost" onclick="goto('handover')">تسليم الشيفت</button>
+      </div>
+
+      <div class="on-duty-banner">
+        <span class="on-duty-icon">🩺</span>
+        <span>${onDuty ? `متواجد الآن: <strong>د. ${onDuty.toDoctor}</strong>` : 'لسه محدش أكد استلام الشيفت'}</span>
+      </div>
+      ${pendingOut.length ? pendingOut.map(p=>`
+        <div class="on-duty-banner pending">
+          <span class="on-duty-icon">⏳</span>
+          <span>في انتظار تأكيد استلام من <strong>د. ${p.toDoctor}</strong></span>
+        </div>`).join('') : ''}
+
+      <div class="stats-bar">
+        ${session.isAdmin ? `
+        <div class="stat-card info">
+          <div class="stat-value">${total}</div>
+          <div class="stat-label">إجمالي الحالات</div>
+        </div>` : ''}
+        <div class="stat-card info">
+          <div class="stat-value">${activeCount}</div>
+          <div class="stat-label">نشطة حالياً</div>
+        </div>
+        ${session.isAdmin ? `
+        <div class="stat-card success">
+          <div class="stat-value">${dischargeRate}%</div>
+          <div class="stat-label">نسبة الخروج</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-value">${mortalityRate}%</div>
+          <div class="stat-label">نسبة الوفيات</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <div class="panel" style="padding-top:14px;">
+      <div class="section-title">الحالات النشطة <span class="count">${activeCount}</span></div>
+      ${activeCards}
+    </div>
+
+    ${session.isAdmin ? `
+    <div class="panel" style="padding-top:14px;">
+      <div class="section-title">الحالات المنتهية <span class="count">${closedTotal}</span></div>
+      ${closedCards}
+    </div>` : ''}`;
+}
+
+/* ---------- MODAL: Add Patient ---------- */
+function openPatientModal(){
+  document.getElementById('patient-modal').classList.add('open');
+  document.getElementById('m-date').valueAsDate = new Date();
+  document.getElementById('m-name').focus();
+}
+function closePatientModal(){
+  if(activeRecognition && activeRecognitionField==='m-history'){ activeRecognition.stop(); }
+  document.getElementById('patient-modal').classList.remove('open');
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-age').value = '';
+  document.getElementById('m-gender').value = 'ذكر';
+  document.getElementById('m-date').value = '';
+  document.getElementById('m-diag').value = '';
+  document.getElementById('m-history').value = '';
+  document.getElementById('m-ticket').value = '';
+  pendingTicketImage = null;
+  const prevEl = document.getElementById('img-preview-area-ticket');
+  if(prevEl) prevEl.innerHTML = '';
+}
+function handleTicketImageSelect(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  resizeImage(file, 900, dataUrl => {
+    pendingTicketImage = {type:'image', data:dataUrl, name:file.name};
+    const el = document.getElementById('img-preview-area-ticket');
+    if(el){
+      el.innerHTML = `<div class="img-preview"><img src="${pendingTicketImage.data}"><button class="img-remove" onclick="removeTicketImage()">&times;</button></div>`;
+    }
+  });
+}
+function removeTicketImage(){
+  pendingTicketImage = null;
+  document.getElementById('m-ticket').value = '';
+  const el = document.getElementById('img-preview-area-ticket');
+  if(el) el.innerHTML = '';
+}
+function submitPatientModal(){
+  const name = document.getElementById('m-name').value.trim();
+  const age = document.getElementById('m-age').value;
+  const gender = document.getElementById('m-gender').value;
+  const admissionDate = document.getElementById('m-date').value;
+  const diagnosis = document.getElementById('m-diag').value.trim();
+  const history = document.getElementById('m-history').value.trim();
+  if(!name) return toast('اكتب اسم المريض');
+  const p = {
+    id:uid(), name, age, gender,
+    hospitalId:session.hospitalId,
+    unitId:session.unitId,
+    admissionDate,
+    status:'active',
+    diagnosis,
+    history,
+    ticketImage: pendingTicketImage || undefined
+  };
+  state.patients.push(p);
+  saveState();
+  toast('اتسجلت الحالة');
+  closePatientModal();
+  session.patientId = p.id;
+  patientTab = 'info';
+  goto('patient-detail');
+}
+
+function selectPatient(id){
+  session.patientId = id;
+  patientTab = 'info';
+  goto('patient-detail');
+}
+
+/* ---------- IMAGE HELPERS ---------- */
+function resizeImage(file, maxWidth, callback){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if(w > maxWidth){ h = h * (maxWidth/w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleImageSelect(event, target){
+  target = target || 'imaging';
+  const files = Array.from(event.target.files);
+  if(!files.length) return;
+  let processed = 0;
+  files.forEach(file => {
+    if(file.type.startsWith('image/')){
+      resizeImage(file, 800, dataUrl => {
+        pendingImages[target].push({type:'image', data:dataUrl, name:file.name});
+        processed++;
+        if(processed === files.length) renderPendingImages(target);
+      });
+    } else if(file.type.startsWith('video/')){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        pendingImages[target].push({type:'video', data:e.target.result, name:file.name});
+        processed++;
+        if(processed === files.length) renderPendingImages(target);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      processed++;
+    }
+  });
+}
+
+function renderPendingImages(target){
+  target = target || 'imaging';
+  const el = document.getElementById('img-preview-area-' + target);
+  if(!el) return;
+  el.innerHTML = pendingImages[target].map((img,i)=>`
+    <div class="img-preview">
+      ${img.type==='image' ? `<img src="${img.data}">` : `<video src="${img.data}"></video>`}
+      <button class="img-remove" onclick="removePendingImage(${i}, '${target}')">&times;</button>
+    </div>
+  `).join('');
+}
+
+function removePendingImage(index, target){
+  target = target || 'imaging';
+  pendingImages[target].splice(index, 1);
+  renderPendingImages(target);
+}
+
+/* ---------- LIGHTBOX ---------- */
+function openLightbox(images, index){
+  lightboxImages = images;
+  lightboxIndex = index;
+  updateLightbox();
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('open');
+  lightboxImages = [];
+}
+function updateLightbox(){
+  const content = document.getElementById('lightbox-content');
+  const caption = document.getElementById('lightbox-caption');
+  const img = lightboxImages[lightboxIndex];
+  if(!img) return;
+  content.innerHTML = img.type==='image'
+    ? `<img src="${img.data}" style="max-width:100%;max-height:85vh;border-radius:8px;">`
+    : `<video src="${img.data}" controls style="max-width:100%;max-height:85vh;border-radius:8px;"></video>`;
+  caption.textContent = (img.date||'') + (img.time?' · '+img.time:'') + (img.name?' · '+img.name:'');
+}
+function lightboxPrev(){
+  if(lightboxIndex > 0){ lightboxIndex--; updateLightbox(); }
+}
+function lightboxNext(){
+  if(lightboxIndex < lightboxImages.length-1){ lightboxIndex++; updateLightbox(); }
+}
+
+/* ---------- VOICE TO TEXT ---------- */
+function toggleVoiceInput(fieldId, btnId){
+  const btn = document.getElementById(btnId);
+  const field = document.getElementById(fieldId);
+  if(!field || !btn) return;
+
+  // Already recording this field -> stop it
+  if(activeRecognition && activeRecognitionField === fieldId){
+    activeRecognition.stop();
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    toast('التسجيل الصوتي مش متاح على المتصفح ده — جربي Chrome');
+    return;
+  }
+
+  // Stop any other active recognition first
+  if(activeRecognition){
+    activeRecognition.stop();
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'ar-EG';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  activeRecognitionBase = field.value ? field.value.trim() + ' ' : '';
+  let finalTranscript = '';
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalTranscript += t + ' ';
+      else interim += t;
+    }
+    field.value = activeRecognitionBase + finalTranscript + interim;
+  };
+
+  recognition.onerror = (e) => {
+    if(e.error !== 'no-speech' && e.error !== 'aborted'){
+      toast('حصل خطأ في التسجيل الصوتي');
+    }
+  };
+
+  recognition.onend = () => {
+    btn.classList.remove('listening');
+    btn.innerHTML = '🎤';
+    if(activeRecognitionField === fieldId){
+      activeRecognition = null;
+      activeRecognitionField = null;
+    }
+  };
+
+  try{
+    recognition.start();
+    activeRecognition = recognition;
+    activeRecognitionField = fieldId;
+    btn.classList.add('listening');
+    btn.innerHTML = '⏹️';
+  }catch(err){
+    toast('حصل خطأ في بدء التسجيل');
+  }
+}
+
+/* ---------- PATIENT DETAIL ---------- */
+function setPatientTab(t){ patientTab = t; render(); }
+
+function renderPatientDetail(c){
+  const p = getPatient(session.patientId);
+  if(!p) return goto('patient');
+  const notes = state.notes.filter(n=>n.patientId===p.id);
+  const sortedNotes = notes.sort((a,b) => (a.date+'T'+a.time).localeCompare(b.date+'T'+b.time));
+
+  let body = '';
+  if(patientTab==='info'){
+    const allAntibiotics = [];
+    const allCultures = [];
+    const allExtLabs = [];
+    const allImagingEvents = [];
+
+    sortedNotes.forEach(n => {
+      const docName = (state.doctors.find(d=>d.id===n.doctorId)||{}).name||'—';
+      if(n.antibiotics && n.antibiotics.trim()){
+        allAntibiotics.push({name:n.antibiotics.trim(), date:n.date, time:n.time, doctor:docName, progress:n.progress, treatment:n.treatment, critical:n.critical});
+      }
+      if((n.cultures && n.cultures.trim()) || (n.cultureImages && n.cultureImages.length)){
+        allCultures.push({text:(n.cultures||'').trim(), date:n.date, time:n.time, doctor:docName, images:n.cultureImages||[]});
+      }
+      if((n.externalLabs && n.externalLabs.trim()) || (n.extLabImages && n.extLabImages.length)){
+        allExtLabs.push({text:(n.externalLabs||'').trim(), date:n.date, time:n.time, doctor:docName, images:n.extLabImages||[]});
+      }
+      if((n.imagingDesc && n.imagingDesc.trim()) || (n.imaging && n.imaging.length)){
+        allImagingEvents.push({desc:(n.imagingDesc||'').trim(), images:n.imaging||[], date:n.date, time:n.time, doctor:docName});
+      }
+    });
+
+    const historyList = sortedNotes.length === 0
+      ? '<p class="info-text" style="color:var(--muted)">مفيش متابعات مسجلة لسه</p>'
+      : sortedNotes.map(n=>`
+          <div class="history-item">
+            <div class="h-date">${n.date} · ${n.time} · د. ${(state.doctors.find(d=>d.id===n.doctorId)||{}).name||'—'}</div>
+            <div class="h-body">
+              ${n.critical? '<span class="critical-flag">🔴 حرج</span>':''}
+              ${n.progress? `<p><span class="info-label">التطور: </span><span class="info-value">${n.progress}</span></p>`:''}
+              ${n.treatment? `<p><span class="info-label">تغيير العلاج: </span><span class="info-value">${n.treatment}</span></p>`:''}
+              ${n.antibiotics? `<p><span class="info-label">المضادات الحيوية: </span><span class="info-value">${n.antibiotics}</span></p>`:''}
+              ${n.cultures? `<p><span class="info-label">Cultures: </span><span class="info-value">${n.cultures}</span></p>`:''}
+              ${n.externalLabs? `<p><span class="info-label">تحاليل خارجية: </span><span class="info-value">${n.externalLabs}</span></p>`:''}
+            </div>
+          </div>`).join('');
+
+    const abList = allAntibiotics.length === 0
+      ? '<p class="info-text" style="color:var(--muted)">مفيش مضادات حيوية مسجلة</p>'
+      : allAntibiotics.map((ab,i)=>`
+          <div class="ab-item" id="ab-${i}" onclick="toggleAb('ab-${i}')">
+            <div class="ab-name">💊 ${ab.name}</div>
+            <div class="ab-date">${ab.date} · ${ab.time} · د. ${ab.doctor}</div>
+            <div class="ab-detail">
+              ${ab.progress? `<p><span class="info-label">التطور: </span>${ab.progress}</p>`:''}
+              ${ab.treatment? `<p><span class="info-label">تغيير العلاج: </span>${ab.treatment}</p>`:''}
+              ${ab.critical? '<span class="critical-flag">🔴 حرج</span>':''}
+            </div>
+          </div>`).join('');
+
+    const cultureList = allCultures.length === 0
+      ? '<p class="info-text" style="color:var(--muted)">مفيش Cultures مسجلة</p>'
+      : allCultures.map((cItem,i)=>`
+          <div class="culture-item">
+            <div class="c-date">${cItem.date} · ${cItem.time} · د. ${cItem.doctor}</div>
+            ${cItem.text? `<div class="c-body">${cItem.text}</div>`:''}
+            ${cItem.images && cItem.images.length ? `<div class="img-grid">${cItem.images.map((img,j)=>`
+              <div class="img-thumb" onclick='openLightbox(${JSON.stringify(cItem.images)}, ${j})'>
+                ${img.type==='image' ? `<img src="${img.data}">` : `<video src="${img.data}"></video>`}
+                <span class="img-type">${img.type==='image'?'📷':'🎬'}</span>
+                <span class="img-date">${cItem.date}</span>
+              </div>`).join('')}</div>` : ''}
+          </div>`).join('');
+
+    const extLabList = allExtLabs.length === 0
+      ? '<p class="info-text" style="color:var(--muted)">مفيش تحاليل خارجية مسجلة</p>'
+      : allExtLabs.map((elItem,i)=>`
+          <div class="ext-lab-item">
+            <div class="el-date">${elItem.date} · ${elItem.time} · د. ${elItem.doctor}</div>
+            ${elItem.text? `<div class="el-body">${elItem.text}</div>`:''}
+            ${elItem.images && elItem.images.length ? `<div class="img-grid">${elItem.images.map((img,j)=>`
+              <div class="img-thumb" onclick='openLightbox(${JSON.stringify(elItem.images)}, ${j})'>
+                ${img.type==='image' ? `<img src="${img.data}">` : `<video src="${img.data}"></video>`}
+                <span class="img-type">${img.type==='image'?'📷':'🎬'}</span>
+                <span class="img-date">${elItem.date}</span>
+              </div>`).join('')}</div>` : ''}
+          </div>`).join('');
+
+    const imagingList = allImagingEvents.length === 0
+      ? '<p class="info-text" style="color:var(--muted)">مفيش Imaging مسجل</p>'
+      : allImagingEvents.map((ev,i)=>`
+          <div class="culture-item">
+            <div class="c-date">${ev.date} · ${ev.time} · د. ${ev.doctor}</div>
+            ${ev.desc? `<div class="c-body">${ev.desc}</div>`:''}
+            ${ev.images && ev.images.length ? `<div class="img-grid">${ev.images.map((img,j)=>`
+              <div class="img-thumb" onclick='openLightbox(${JSON.stringify(ev.images)}, ${j})'>
+                ${img.type==='image' ? `<img src="${img.data}">` : `<video src="${img.data}"></video>`}
+                <span class="img-type">${img.type==='image'?'📷':'🎬'}</span>
+                <span class="img-date">${ev.date}</span>
+              </div>`).join('')}</div>` : ''}
+          </div>`).join('');
+
+    body = `
+      <div class="panel">
+        <h2>بيانات الحالة</h2>
+        <p class="info-text"><span class="info-label">الاسم: </span><span class="info-value">${p.name}</span></p>
+        <p class="info-text"><span class="info-label">السن: </span><span class="info-value">${p.age||'—'} سنة</span></p>
+        <p class="info-text"><span class="info-label">النوع: </span><span class="info-value">${p.gender||'—'}</span></p>
+        <p class="info-text"><span class="info-label">تاريخ الدخول: </span><span class="info-value">${p.admissionDate||'—'}</span></p>
+        ${p.dischargeDate? `<p class="info-text"><span class="info-label">تاريخ الخروج/الوفاة: </span><span class="info-value">${p.dischargeDate}</span></p>`:''}
+        <p class="info-text"><span class="info-label">التشخيص: </span><span class="info-value">${p.diagnosis||'—'}</span></p>
+        ${p.history ? `
+        <div class="ho-box">
+          <div class="ho-label">H/O</div>
+          <div class="ho-text">${p.history}</div>
+        </div>` : ''}
+        ${p.ticketImage ? `
+        <div class="field" style="margin-top:14px;">
+          <label>صورة التذكرة</label>
+          <div class="img-grid" style="grid-template-columns:repeat(2,1fr);max-width:220px;">
+            <div class="img-thumb" onclick='openLightbox([${JSON.stringify(p.ticketImage)}], 0)'>
+              <img src="${p.ticketImage.data}">
+              <span class="img-type">📷</span>
+            </div>
+          </div>
+        </div>` : ''}
+        <div class="field" style="margin-top:16px;">
+          <label>حالة المريض</label>
+          <select onchange="changeStatus('${p.id}', this.value)">
+            <option value="active" ${p.status==='active'?'selected':''}>تحت المتابعة</option>
+            <option value="discharged" ${p.status==='discharged'?'selected':''}>خرج</option>
+            <option value="deceased" ${p.status==='deceased'?'selected':''}>متوفى</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>سجل المتابعات (${sortedNotes.length})</h2>
+        <div class="history-list">
+          ${historyList}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>المضادات الحيوية (${allAntibiotics.length})</h2>
+        <div class="history-list">
+          ${abList}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Cultures (${allCultures.length})</h2>
+        <div class="history-list">
+          ${cultureList}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>التحاليل الخارجية (${allExtLabs.length})</h2>
+        <div class="history-list">
+          ${extLabList}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Imaging (${allImagingEvents.length})</h2>
+        <div class="history-list">
+          ${imagingList}
+        </div>
+      </div>`;
+  } else {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0,10);
+    const timeStr = now.toTimeString().slice(0,5);
+
+    body = `
+      <div class="panel">
+        <h2>إضافة متابعة جديدة</h2>
+        <div class="auto-date">📅 ${dateStr} · 🕐 ${timeStr}</div>
+        <div class="field">
+          <div class="field-label-row">
+            <label>ملاحظات التطور</label>
+            <button type="button" class="mic-btn" id="mic-n-progress" title="تسجيل صوتي" onclick="toggleVoiceInput('n-progress','mic-n-progress')">🎤</button>
+          </div>
+          <textarea id="n-progress" placeholder="تطور الحالة اليوم"></textarea>
+        </div>
+        <div class="field"><label>تغييرات العلاج</label><textarea id="n-treatment" placeholder="أي تغيير في الخطة العلاجية"></textarea></div>
+        <div class="field"><label>المضادات الحيوية</label><input id="n-antibiotics" placeholder="اكتب اسم المضاد الحيوي اللي اتضاف / اتغيّر"></div>
+
+        <div class="field"><label>Cultures</label><textarea id="n-cultures" placeholder="نتيجة الـ Culture / الميكروب / الحساسية..."></textarea></div>
+        <div class="field">
+          <label>صور Culture <small style="color:var(--muted)">(اختياري)</small></label>
+          <input type="file" id="n-culture-images" accept="image/*,video/*" multiple onchange="handleImageSelect(event,'cultures')">
+          <div class="img-preview-grid" id="img-preview-area-cultures"></div>
+        </div>
+
+        <div class="field"><label>التحاليل الخارجية</label><textarea id="n-extlabs" placeholder="نتائج تحاليل خارجية: CBC، LFT، KFT، Electrolytes، ABG... إلخ"></textarea></div>
+        <div class="field">
+          <label>صور التحاليل الخارجية <small style="color:var(--muted)">(اختياري)</small></label>
+          <input type="file" id="n-extlab-images" accept="image/*,video/*" multiple onchange="handleImageSelect(event,'extlabs')">
+          <div class="img-preview-grid" id="img-preview-area-extlabs"></div>
+        </div>
+
+        <div class="field"><label>Imaging <small style="color:var(--muted)">(وصف الحدث: مثال CT بالمخ / سونار على البطن)</small></label><textarea id="n-imaging-desc" placeholder="اكتب وصف الأشعة أو السونار اللي اتعمل"></textarea></div>
+        <div class="field">
+          <label>صور / فيديو Imaging</label>
+          <input type="file" id="n-imaging" accept="image/*,video/*" multiple onchange="handleImageSelect(event,'imaging')">
+          <div class="img-preview-grid" id="img-preview-area-imaging"></div>
+        </div>
+
+        <div class="field" style="display:flex;align-items:center;gap:8px;flex-direction:row-reverse;justify-content:flex-end;">
+          <label style="margin:0;font-size:.85rem;">حالة حرجة تحتاج انتباه</label>
+          <input type="checkbox" id="n-critical" style="width:auto;">
+        </div>
+        <button class="btn wide" onclick="addNote()">حفظ المتابعة</button>
+      </div>
+      <div class="panel">
+        <h2>الـ History (${notes.length})</h2>
+        ${notes.length===0 ? `<div class="empty">مفيش متابعات مسجلة لسه</div>` :
+          notes.slice().reverse().map(n=>`
+          <div class="note ${n.critical?'critical':''}">
+            <div class="note-head"><span>${n.date} · ${n.time}</span></div>
+            ${n.critical? `<span class="critical-flag">🔴 حرج</span>`:''}
+            ${n.progress? `<p><span class="label">التطور: </span>${n.progress}</p>`:''}
+            ${n.treatment? `<p><span class="label">تغيير العلاج: </span>${n.treatment}</p>`:''}
+            ${n.antibiotics? `<p><span class="label">المضادات الحيوية: </span>${n.antibiotics}</p>`:''}
+            ${n.cultures? `<p><span class="label">Cultures: </span>${n.cultures}</p>`:''}
+            ${n.cultureImages && n.cultureImages.length ? `<p><span class="label">صور Culture: </span>${n.cultureImages.length} ملف</p>`:''}
+            ${n.externalLabs? `<p><span class="label">تحاليل خارجية: </span>${n.externalLabs}</p>`:''}
+            ${n.extLabImages && n.extLabImages.length ? `<p><span class="label">صور تحاليل خارجية: </span>${n.extLabImages.length} ملف</p>`:''}
+            ${n.imagingDesc? `<p><span class="label">Imaging: </span>${n.imagingDesc}</p>`:''}
+            ${n.imaging && n.imaging.length ? `<p><span class="label">صور Imaging: </span>${n.imaging.length} ملف</p>`:''}
+          </div>`).join('')}
+      </div>`;
+  }
+
+  c.innerHTML = `
+    <div class="tabs2">
+      <button class="${patientTab==='info'?'active':''}" onclick="setPatientTab('info')">بيانات الحالة</button>
+      <button class="${patientTab==='notes'?'active':''}" onclick="setPatientTab('notes')">المتابعة اليومية</button>
+    </div>
+    ${body}`;
+}
+
+function toggleAb(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
+
+function changeStatus(id, status){
+  const p = getPatient(id);
+  if(p){ p.status = status; if(status!=='active') p.dischargeDate = new Date().toISOString().slice(0,10); }
+  saveState();
+  toast('اتحدثت الحالة');
+  render();
+}
+
+function addNote(){
+  const progress = document.getElementById('n-progress').value.trim();
+  const treatment = document.getElementById('n-treatment').value.trim();
+  const antibiotics = document.getElementById('n-antibiotics').value.trim();
+  const cultures = document.getElementById('n-cultures').value.trim();
+  const externalLabs = document.getElementById('n-extlabs').value.trim();
+  const imagingDesc = document.getElementById('n-imaging-desc').value.trim();
+  const critical = document.getElementById('n-critical').checked;
+  const hasImaging = pendingImages.imaging.length>0;
+  const hasCultureImg = pendingImages.cultures.length>0;
+  const hasExtLabImg = pendingImages.extlabs.length>0;
+  if(!progress && !treatment && !antibiotics && !cultures && !externalLabs && !imagingDesc && !hasImaging && !hasCultureImg && !hasExtLabImg) return toast('اكتب ملاحظات أو ضف بيانات الأول');
+
+  const now = new Date();
+  state.notes.push({
+    id:uid(),
+    patientId:session.patientId,
+    date: now.toISOString().slice(0,10),
+    time: now.toTimeString().slice(0,5),
+    doctorId:session.doctor.id,
+    progress,
+    treatment,
+    antibiotics,
+    cultures,
+    cultureImages: hasCultureImg ? [...pendingImages.cultures] : undefined,
+    externalLabs,
+    extLabImages: hasExtLabImg ? [...pendingImages.extlabs] : undefined,
+    imagingDesc,
+    imaging: hasImaging ? [...pendingImages.imaging] : undefined,
+    critical
+  });
+  pendingImages = { imaging: [], cultures: [], extlabs: [] };
+  saveState();
+  toast('اتحفظت المتابعة');
+  render();
+}
+
+/* ---------- HANDOVER ---------- */
+function renderHandoverScreen(c){
+  const h = getHospital(session.hospitalId);
+  const u = h ? getUnit(h.id, session.unitId) : null;
+  if(!h || !u) return goto('patient');
+  const active = state.patients.filter(p=>p.hospitalId===h.id && p.unitId===u.id && p.status==='active');
+  const unitHandovers = state.handovers.filter(o=>o.hospitalId===h.id && o.unitId===u.id).slice().reverse();
+  const myPending = getPendingHandoverFor(h.id, u.id, session.doctor.id);
+  const otherDoctors = state.doctors.filter(d => d.id !== session.doctor.id);
+
+  const confirmPanel = myPending ? `
+    <div class="handover-confirm-panel">
+      <h2>عندك تسليم شيفت في انتظارك</h2>
+      <p class="info-text">من د. <strong>${myPending.fromDoctor}</strong> — ${myPending.patientCount} حالة نشطة · ${myPending.date} · ${myPending.time}</p>
+      <button class="btn wide" onclick="confirmHandover('${myPending.id}')">استلام الشيفت</button>
+    </div>` : '';
+
+  const submitPanel = myPending ? '' : `
+    <div class="field" style="margin-top:10px;">
+      <label>الطبيب اللي هيستلم الشيفت</label>
+      <select id="ho-doctor">
+        <option value="">اختَر الطبيب</option>
+        ${otherDoctors.map(d=>`<option value="${d.id}">${d.name}${d.docId? ' — '+d.docId:''}</option>`).join('')}
+      </select>
+    </div>
+    <button class="btn wide" onclick="submitHandover()">تسليم الشيفت</button>`;
+
+  c.innerHTML = `
+    <div class="panel">
+      <h2>تسليم الشيفت — ${u.name}</h2>
+      <div class="sub">${active.length} حالة نشطة</div>
+
+      ${confirmPanel}
+      ${submitPanel}
+
+      ${active.length===0 ? `<div class="empty" style="margin-top:16px;"><span>✅</span>مفيش حالات نشطة دلوقتي</div>` :
+        active.map(p=>{
+          const lastNote = state.notes.filter(n=>n.patientId===p.id).slice(-1)[0];
+          return `
+          <div class="note ${lastNote&&lastNote.critical?'critical':''}" style="margin-top:10px;">
+            <div class="note-head"><span>${p.name}</span>${lastNote? `<span>${lastNote.date} · ${lastNote.time}</span>`:''}</div>
+            ${lastNote&&lastNote.critical? `<span class="critical-flag">🔴 حرج</span>`:''}
+            <p><span class="label">التشخيص: </span>${p.diagnosis||'—'}</p>
+            ${lastNote ? `
+              ${lastNote.progress? `<p><span class="label">آخر تطور: </span>${lastNote.progress}</p>`:''}
+              ${lastNote.antibiotics? `<p><span class="label">المضاد الحيوي: </span>${lastNote.antibiotics}</p>`:''}
+              ${lastNote.cultures? `<p><span class="label">Cultures: </span>${lastNote.cultures}</p>`:''}
+              ${lastNote.externalLabs? `<p><span class="label">تحاليل خارجية: </span>${lastNote.externalLabs}</p>`:''}
+            ` : `<p class="meta">لسه مفيش متابعة مسجلة</p>`}
+          </div>`;
+        }).join('')}
+
+      <button class="btn ghost wide" style="margin-top:14px;" onclick="goto('patient')">رجوع لقائمة الحالات</button>
+    </div>
+
+    ${unitHandovers.length > 0 ? `
+    <div class="panel">
+      <h2>سجل تسليم الشيفتات</h2>
+      ${unitHandovers.map(o=>`
+        <div class="note">
+          <div class="note-head"><span>${o.date} · ${o.time}</span></div>
+          <p><span class="label">من: </span>د. ${o.fromDoctor}</p>
+          <p><span class="label">إلى: </span>د. ${o.toDoctor}</p>
+          <p><span class="label">الحالات: </span>${o.patientCount} حالة نشطة</p>
+          <p><span class="label">الحالة: </span>${o.status==='confirmed' ? '✅ تم الاستلام' : '⏳ في انتظار التأكيد'}</p>
+        </div>
+      `).join('')}
+    </div>` : ''}`;
+}
+function submitHandover(){
+  const toDoctorId = document.getElementById('ho-doctor').value;
+  if(!toDoctorId) return toast('اختَر الطبيب اللي هيستلم');
+  const toDoctor = state.doctors.find(d=>d.id===toDoctorId);
+  if(!toDoctor) return toast('حصلت مشكلة، حاول تاني');
+  const h = getHospital(session.hospitalId);
+  const u = h ? getUnit(h.id, session.unitId) : null;
+  const activeCount = state.patients.filter(p=>p.hospitalId===h.id && p.unitId===u.id && p.status==='active').length;
+  const now = new Date();
+  state.handovers.push({
+    id: uid(),
+    hospitalId: session.hospitalId,
+    unitId: session.unitId,
+    fromDoctorId: session.doctor.id,
+    fromDoctor: session.doctor.name,
+    toDoctorId: toDoctor.id,
+    toDoctor: toDoctor.name,
+    patientCount: activeCount,
+    date: now.toISOString().slice(0,10),
+    time: now.toTimeString().slice(0,5),
+    status: 'pending'
+  });
+  saveState();
+  toast('اتبعت طلب تسليم لـ د. ' + toDoctor.name + ' — في انتظار تأكيده');
+  render();
+}
+function confirmHandover(handoverId){
+  const ho = state.handovers.find(h=>h.id===handoverId);
+  if(!ho) return;
+  if(ho.toDoctorId !== session.doctor.id) return toast('التسليم ده مش موجه ليك');
+  ho.status = 'confirmed';
+  ho.confirmedAt = new Date().toISOString();
+  saveState();
+  toast('تم استلام الشيفت');
+  goto('patient');
+}
+
+window.goto = goto;
+window.doLogin = doLogin;
+window.quickLogin = quickLogin;
+window.addDoctorByAdmin = addDoctorByAdmin;
+window.logout = logout;
+window.addHospital = addHospital;
+window.selectHospital = selectHospital;
+window.addUnit = addUnit;
+window.selectUnit = selectUnit;
+window.openPatientModal = openPatientModal;
+window.closePatientModal = closePatientModal;
+window.submitPatientModal = submitPatientModal;
+window.handleTicketImageSelect = handleTicketImageSelect;
+window.removeTicketImage = removeTicketImage;
+window.selectPatient = selectPatient;
+window.setPatientTab = setPatientTab;
+window.toggleAb = toggleAb;
+window.changeStatus = changeStatus;
+window.addNote = addNote;
+window.submitHandover = submitHandover;
+window.confirmHandover = confirmHandover;
+window.handleImageSelect = handleImageSelect;
+window.removePendingImage = removePendingImage;
+window.openLightbox = openLightbox;
+window.closeLightbox = closeLightbox;
+window.lightboxPrev = lightboxPrev;
+window.lightboxNext = lightboxNext;
+window.toggleVoiceInput = toggleVoiceInput;
+
+loadState();
+
+// مزامنة لحظية: أي دكتور يعمل تعديل، يظهر عند الباقي أوتوماتيك
+supabaseClient
+  .channel('app_data_sync')
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_data', filter: `id=eq.${APP_ROW_ID}` }, payload => {
+    if(!payload.new || !payload.new.data) return;
+    const modalOpen = document.getElementById('patient-modal') && document.getElementById('patient-modal').classList.contains('open');
+    const typingNotes = screen==='patient-detail' && patientTab==='notes';
+    if(modalOpen || typingNotes) return; // منتحدثش الشاشة لو حد بيكتب دلوقتي عشان منمسحش كتابته
+    state = payload.new.data;
+    if(!state.handovers) state.handovers = [];
+    render();
+  })
+  .subscribe();
+
+// تسجيل الـ Service Worker عشان التطبيق يشتغل كـ PWA (قابل للتثبيت + Offline بسيط)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW registration failed', err));
+  });
+}
+</script>
+</body>
+</html>
