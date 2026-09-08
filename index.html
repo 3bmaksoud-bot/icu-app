@@ -202,6 +202,34 @@
   .splash h1{color:#fff;font-size:1.15rem;font-weight:700;margin:0;opacity:0;animation:fadeUp .5s ease-out 1.05s forwards;letter-spacing:.2px;}
   .splash .sub{color:rgba(255,255,255,.65);font-size:.78rem;margin:0;opacity:0;animation:fadeUp .5s ease-out 1.2s forwards;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .workflow-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;background:var(--mint);border:1px solid var(--line);border-radius:9px;font-size:.8rem;color:var(--teal-deep);}
+  .workflow-strip strong{font-size:1rem;margin-left:3px;}
+  .workflow-strip .workflow-critical{color:var(--critical);font-weight:600;}
+  .workflow-strip .workflow-muted{color:var(--muted);}
+  .patient-toolbar{display:flex;flex-direction:column;gap:9px;margin-bottom:12px;}
+  .patient-search{position:relative;}
+  .patient-search input{padding-right:36px;}
+  .patient-search .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1rem;pointer-events:none;}
+  .filter-pills{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+  .filter-pill{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);padding:6px 10px;border-radius:20px;font-family:inherit;font-size:.78rem;cursor:pointer;}
+  .filter-pill.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .filter-pill.critical.active{background:var(--critical);border-color:var(--critical);}
+  .patient-filter-summary{margin:0;color:var(--muted);font-size:.75rem;}
+  .patient-card{align-items:flex-start;}
+  .patient-card-main{min-width:0;flex:1;}
+  .patient-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .patient-title strong{font-size:.98rem;}
+  .patient-last-note{font-size:.74rem;color:var(--muted);margin-top:5px;}
+  .priority-tag{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:.68rem;font-weight:600;white-space:nowrap;background:var(--stable-bg);color:var(--stable);}
+  .priority-tag.critical{background:var(--critical-bg);color:var(--critical);}
+  .priority-tag.needs-update{background:#fff3d8;color:#8a5a00;}
+  .patient-card-critical{border-color:#e5a49a;background:#fffaf9;}
+  .patient-card-needs-update{border-right:3px solid #dca83b;}
+  .handover-summary{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px;}
+  .handover-summary span{padding:5px 9px;border-radius:7px;background:#f6faf9;border:1px solid var(--line);font-size:.75rem;color:var(--muted);}
+  .handover-summary .critical{color:var(--critical);background:var(--critical-bg);border-color:#efc7c0;}
+  @media (max-width:480px){.workflow-strip{align-items:flex-start;flex-direction:column;gap:4px;}.patient-card{padding:12px 11px;}}
 </style>
 </head>
 <body>
@@ -322,6 +350,8 @@ let saveFailed = false;
 let lightboxImages = [];
 let lightboxIndex = 0;
 let pendingImages = { imaging: [], cultures: [], extlabs: [] };
+let patientQuery = '';
+let patientFilter = 'all';
 let pendingTicketImage = null;
 let activeRecognition = null;
 let activeRecognitionField = null;
@@ -455,7 +485,43 @@ function getPendingHandoversOut(hospitalId, unitId){
   return state.handovers.filter(h => h.hospitalId===hospitalId && h.unitId===unitId && h.status==='pending');
 }
 
-function goto(s){ screen = s; render(); }
+function getLatestPatientNote(patientId){
+  return state.notes.filter(n=>n.patientId===patientId).slice().sort((a,b)=>(a.date+'T'+(a.time||'')).localeCompare(b.date+'T'+(b.time||''))).slice(-1)[0] || null;
+}
+function patientNeedsUpdate(p){
+  const latest = getLatestPatientNote(p.id);
+  if(!latest || !latest.date) return true;
+  const stamp = new Date(latest.date+'T'+(latest.time||'00:00'));
+  return Number.isNaN(stamp.getTime()) || (Date.now()-stamp.getTime()) > 24*60*60*1000;
+}
+function patientPriorityMeta(p){
+  const latest = getLatestPatientNote(p.id);
+  if(latest && latest.critical) return {key:'critical', label:'حرج الآن', score:0};
+  if(patientNeedsUpdate(p)) return {key:'needs-update', label:latest?'تحتاج متابعة':'بدون متابعة', score:1};
+  return {key:'stable', label:'مستقرة', score:2};
+}
+function setPatientFilter(filter){
+  patientFilter = filter;
+  applyPatientListFilter();
+}
+function filterPatients(input){
+  patientQuery = input.value || '';
+  applyPatientListFilter();
+}
+function applyPatientListFilter(){
+  const query = patientQuery.trim().toLocaleLowerCase('ar-EG');
+  let visible = 0;
+  document.querySelectorAll('[data-patient-card]').forEach(card=>{
+    const matchesQuery = !query || (card.dataset.search||'').toLocaleLowerCase('ar-EG').includes(query);
+    const matchesFilter = patientFilter==='all' || card.dataset.priority===patientFilter;
+    const show = matchesQuery && matchesFilter;
+    card.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  document.querySelectorAll('[data-patient-filter]').forEach(btn=>btn.classList.toggle('active', btn.dataset.patientFilter===patientFilter));
+  const summary = document.getElementById('patient-filter-summary');
+  if(summary) summary.textContent = 'ظاهر الآن: '+visible+' حالة';
+}
 
 function renderHeader(){
   const tag = document.getElementById('doctor-tag');
@@ -733,11 +799,17 @@ function renderPatientScreen(c){
   if(!h || !u) return goto('unit');
 
   const allPatients = state.patients.filter(p=>p.hospitalId===h.id && p.unitId===u.id);
-  const active = allPatients.filter(p=>p.status==='active').slice().reverse();
+  const active = allPatients.filter(p=>p.status==='active').slice().sort((a,b)=>{
+    const priorityDiff = patientPriorityMeta(a).score - patientPriorityMeta(b).score;
+    if(priorityDiff) return priorityDiff;
+    return (a.name||'').localeCompare(b.name||'', 'ar');
+  });
   const closed = allPatients.filter(p=>p.status!=='active').slice().reverse();
 
   const total = allPatients.length;
   const activeCount = active.length;
+  const criticalCount = active.filter(p=>patientPriorityMeta(p).key==='critical').length;
+  const needsUpdateCount = active.filter(p=>patientNeedsUpdate(p)).length;
   const dischargedCount = allPatients.filter(p=>p.status==='discharged').length;
   const deceasedCount = allPatients.filter(p=>p.status==='deceased').length;
   const closedTotal = dischargedCount + deceasedCount;
@@ -747,14 +819,20 @@ function renderPatientScreen(c){
 
   const activeCards = active.length === 0
     ? `<div class="empty"><span>🧑‍⚕️</span>مفيش حالات نشطة دلوقتي</div>`
-    : active.map(p=>`
-        <div class="card" onclick="selectPatient('${p.id}')">
-          <div class="card-main">
-            <strong>${p.name}</strong>
+    : active.map(p=>{
+        const latest = getLatestPatientNote(p.id);
+        const priority = patientPriorityMeta(p);
+        const cardClass = priority.key==='critical' ? 'patient-card-critical' : (priority.key==='needs-update' ? 'patient-card-needs-update' : '');
+        return `
+        <div class="card patient-card ${cardClass}" data-patient-card data-priority="${priority.key}" data-search="${p.name||''}" onclick="selectPatient('${p.id}')">
+          <div class="patient-card-main">
+            <div class="patient-title"><strong>${p.name}</strong><span class="priority-tag ${priority.key}">${priority.label}</span></div>
             <div class="meta">${p.age?p.age+' سنة · ':''}${p.gender||''} · دخل ${p.admissionDate||'—'}</div>
+            <div class="patient-last-note">${latest ? 'آخر متابعة: '+latest.date+' · '+(latest.time||'') : 'لا توجد متابعة مسجلة بعد'}</div>
           </div>
-          <span class="badge active">تحت المتابعة</span>
-        </div>`).join('');
+          <span class="card-arrow">‹</span>
+        </div>`;
+      }).join('');
 
   const closedCards = closed.length === 0
     ? `<div class="empty"><span>📋</span>مفيش حالات منتهية لسه</div>`
@@ -787,6 +865,12 @@ function renderPatientScreen(c){
           <span>في انتظار تأكيد استلام من <strong>د. ${p.toDoctor}</strong></span>
         </div>`).join('') : ''}
 
+      <div class="workflow-strip">
+        <span>الأولوية الآن</span>
+        <span class="workflow-critical"><strong>${criticalCount}</strong> حرجة</span>
+        <span class="workflow-muted"><strong>${needsUpdateCount}</strong> تحتاج متابعة</span>
+      </div>
+
       <div class="stats-bar">
         ${session.isAdmin ? `
         <div class="stat-card info">
@@ -811,6 +895,18 @@ function renderPatientScreen(c){
 
     <div class="panel" style="padding-top:14px;">
       <div class="section-title">الحالات النشطة <span class="count">${activeCount}</span></div>
+      <div class="patient-toolbar">
+        <div class="patient-search">
+          <span class="search-icon">⌕</span>
+          <input type="search" placeholder="ابحث باسم المريض" oninput="filterPatients(this)" autocomplete="off">
+        </div>
+        <div class="filter-pills" role="tablist" aria-label="فلترة الحالات">
+          <button class="filter-pill active" data-patient-filter="all" onclick="setPatientFilter('all')">الكل</button>
+          <button class="filter-pill critical" data-patient-filter="critical" onclick="setPatientFilter('critical')">حرجة (${criticalCount})</button>
+          <button class="filter-pill" data-patient-filter="needs-update" onclick="setPatientFilter('needs-update')">تحتاج متابعة (${needsUpdateCount})</button>
+        </div>
+        <p class="patient-filter-summary" id="patient-filter-summary">ظاهر الآن: ${activeCount} حالة</p>
+      </div>
       ${activeCards}
     </div>
 
@@ -1459,16 +1555,21 @@ function renderHandoverScreen(c){
     <div class="panel">
       <h2>تسليم الشيفت — ${u.name}</h2>
       <div class="sub">${active.length} حالة نشطة</div>
+      <div class="handover-summary">
+        <span class="critical">${active.filter(p=>patientPriorityMeta(p).key==='critical').length} حالات حرجة</span>
+        <span>${active.filter(p=>patientNeedsUpdate(p)).length} تحتاج متابعة</span>
+      </div>
 
       ${confirmPanel}
       ${submitPanel}
 
       ${active.length===0 ? `<div class="empty" style="margin-top:16px;"><span>✅</span>مفيش حالات نشطة دلوقتي</div>` :
         active.map(p=>{
-          const lastNote = state.notes.filter(n=>n.patientId===p.id).slice(-1)[0];
+          const lastNote = getLatestPatientNote(p.id);
+          const priority = patientPriorityMeta(p);
           return `
           <div class="note ${lastNote&&lastNote.critical?'critical':''}" style="margin-top:10px;">
-            <div class="note-head"><span>${p.name}</span>${lastNote? `<span>${lastNote.date} · ${lastNote.time}</span>`:''}</div>
+            <div class="note-head"><span>${p.name}</span><span class="priority-tag ${priority.key}">${priority.label}</span>${lastNote? `<span>${lastNote.date} · ${lastNote.time}</span>`:''}</div>
             ${lastNote&&lastNote.critical? `<span class="critical-flag">🔴 حرج</span>`:''}
             <p><span class="label">التشخيص: </span>${p.diagnosis||'—'}</p>
             ${lastNote ? `
