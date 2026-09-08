@@ -230,6 +230,17 @@
   .handover-summary span{padding:5px 9px;border-radius:7px;background:#f6faf9;border:1px solid var(--line);font-size:.75rem;color:var(--muted);}
   .handover-summary .critical{color:var(--critical);background:var(--critical-bg);border-color:#efc7c0;}
   @media (max-width:480px){.workflow-strip{align-items:flex-start;flex-direction:column;gap:4px;}.patient-card{padding:12px 11px;}}
+
+  .patient-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .patient-stage-control{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+  .stage-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--stable);box-shadow:0 0 0 3px var(--stable-bg);}
+  .stage-dot.critical{background:var(--critical);box-shadow:0 0 0 3px var(--critical-bg);}
+  .stage-dot.follow-up{background:#2d7a6b;box-shadow:0 0 0 3px var(--stable-bg);}
+  .stage-dot.discharge-ready{background:#c58b1d;box-shadow:0 0 0 3px #fff3d8;}
+  .patient-stage-select{border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--teal-deep);padding:5px 8px;font-family:inherit;font-size:.7rem;cursor:pointer;max-width:132px;}
+  .patient-stage-select:focus{outline:2px solid var(--mint);border-color:var(--teal);}
+  .stage-legend{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 12px;color:var(--muted);font-size:.74rem;}
+  .stage-legend span{display:inline-flex;align-items:center;gap:6px;}
 </style>
 </head>
 <body>
@@ -366,7 +377,7 @@ function toast(msg){
 }
 
 async function loadState(){
-  const splashMinDelay = new Promise(res => setTimeout(res, 1300));
+  const splashMinDelay = new Promise(res => setTimeout(res, 250));
   try{
     const fetchPromise = supabaseClient
       .from('app_data')
@@ -494,9 +505,32 @@ function patientNeedsUpdate(p){
   const stamp = new Date(latest.date+'T'+(latest.time||'00:00'));
   return Number.isNaN(stamp.getTime()) || (Date.now()-stamp.getTime()) > 24*60*60*1000;
 }
+function getPatientStage(p){
+  const stored = p.clinicalStage || p.careStage || p.stage;
+  if(stored==='critical' || stored==='follow-up' || stored==='discharge-ready') return stored;
+  const latest = getLatestPatientNote(p.id);
+  return latest && latest.critical ? 'critical' : 'follow-up';
+}
+function patientStageMeta(p){
+  const stage = getPatientStage(p);
+  if(stage==='critical') return {key:'critical', label:'حالة حرجة'};
+  if(stage==='discharge-ready') return {key:'discharge-ready', label:'استعداد خروج'};
+  return {key:'follow-up', label:'تحت المتابعة'};
+}
+function setPatientStage(id, stage){
+  const allowed = ['critical','follow-up','discharge-ready'];
+  if(!allowed.includes(stage)) return;
+  const p = getPatient(id);
+  if(!p) return;
+  p.clinicalStage = stage;
+  saveState();
+  toast('اتحدّث تصنيف الحالة');
+  render();
+}
 function patientPriorityMeta(p){
   const latest = getLatestPatientNote(p.id);
-  if(latest && latest.critical) return {key:'critical', label:'حرج الآن', score:0};
+  const stage = getPatientStage(p);
+  if(stage==='critical' || (latest && latest.critical)) return {key:'critical', label:'حرج الآن', score:0};
   if(patientNeedsUpdate(p)) return {key:'needs-update', label:latest?'تحتاج متابعة':'بدون متابعة', score:1};
   return {key:'stable', label:'مستقرة', score:2};
 }
@@ -823,11 +857,21 @@ function renderPatientScreen(c){
     : active.map(p=>{
         const latest = getLatestPatientNote(p.id);
         const priority = patientPriorityMeta(p);
+        const stage = patientStageMeta(p);
         const cardClass = priority.key==='critical' ? 'patient-card-critical' : (priority.key==='needs-update' ? 'patient-card-needs-update' : '');
         return `
         <div class="card patient-card ${cardClass}" data-patient-card data-priority="${priority.key}" data-search="${p.name||''}" onclick="selectPatient('${p.id}')">
           <div class="patient-card-main">
-            <div class="patient-title"><strong>${p.name}</strong><span class="priority-tag ${priority.key}">${priority.label}</span></div>
+            <div class="patient-card-top">
+              <div class="patient-title"><span class="stage-dot ${stage.key}" title="${stage.label}"></span><strong>${p.name}</strong><span class="priority-tag ${priority.key}">${priority.label}</span></div>
+              <div class="patient-stage-control" onclick="event.stopPropagation()">
+                <select class="patient-stage-select" aria-label="تصنيف حالة ${p.name}" onchange="setPatientStage('${p.id}', this.value)">
+                  <option value="critical" ${stage.key==='critical'?'selected':''}>حالة حرجة</option>
+                  <option value="follow-up" ${stage.key==='follow-up'?'selected':''}>تحت المتابعة</option>
+                  <option value="discharge-ready" ${stage.key==='discharge-ready'?'selected':''}>استعداد خروج</option>
+                </select>
+              </div>
+            </div>
             <div class="meta">${p.age?p.age+' سنة · ':''}${p.gender||''} · دخل ${p.admissionDate||'—'}</div>
             <div class="patient-last-note">${latest ? 'آخر متابعة: '+latest.date+' · '+(latest.time||'') : 'لا توجد متابعة مسجلة بعد'}</div>
           </div>
@@ -870,6 +914,11 @@ function renderPatientScreen(c){
         <span>الأولوية الآن</span>
         <span class="workflow-critical"><strong>${criticalCount}</strong> حرجة</span>
         <span class="workflow-muted"><strong>${needsUpdateCount}</strong> تحتاج متابعة</span>
+      </div>
+      <div class="stage-legend">
+        <span><i class="stage-dot critical"></i> حالة حرجة</span>
+        <span><i class="stage-dot follow-up"></i> تحت المتابعة</span>
+        <span><i class="stage-dot discharge-ready"></i> استعداد خروج</span>
       </div>
 
       <div class="stats-bar">
@@ -1670,7 +1719,9 @@ window.closeLightbox = closeLightbox;
 window.lightboxPrev = lightboxPrev;
 window.lightboxNext = lightboxNext;
 window.toggleVoiceInput = toggleVoiceInput;
+window.setPatientStage = setPatientStage;
 
+render();
 loadState();
 
 // مزامنة لحظية: أي دكتور يعمل تعديل، يظهر عند الباقي أوتوماتيك
