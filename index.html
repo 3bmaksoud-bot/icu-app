@@ -522,6 +522,7 @@ function applyPatientListFilter(){
   const summary = document.getElementById('patient-filter-summary');
   if(summary) summary.textContent = 'ظاهر الآن: '+visible+' حالة';
 }
+function goto(s){ screen = s; render(); }
 
 function renderHeader(){
   const tag = document.getElementById('doctor-tag');
