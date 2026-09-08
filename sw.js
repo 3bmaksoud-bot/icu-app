@@ -1,10 +1,10 @@
-const CACHE_NAME = 'icu-tracker-v11';
+const CACHE_NAME = 'icu-tracker-v12';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
+  './icon-192-1.png',
+  './icon-512-1.png',
   './icon-maskable-192.png',
   './icon-maskable-512.png'
 ];
